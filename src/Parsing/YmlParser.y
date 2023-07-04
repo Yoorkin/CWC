@@ -81,7 +81,7 @@ sepBy(x,delim) : sepBy1(x,delim) { $1 }
 endWith(x,end) : x end { $1 }
 
 
-Start : many(Toplevel) EOF { $1 }
+Start : many(Toplevel) EOF { Module $1 }
 
 Toplevel : 'data' IDENT many(IDENT) '=' sepBy1(TypeConstr,'|')  { ToplevelType $2 $3 $5 } 
          | 'let' Pattern '=' Expr { ToplevelLet $2 $4 }

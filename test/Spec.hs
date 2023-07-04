@@ -15,12 +15,10 @@ main = hspec $ do
          in result `shouldBe` [ToplevelType "Tree" ["a"] 
                                        [("Node",TypeTuple [TypeApply (TypeVar "Tree") (TypeVar "a"),TypeApply (TypeVar "Tree") (TypeVar "a")]),
                                        ("Leaf",TypeVar "a")]]
-
        
         it "test record declaration" $
          let result = process "data CStyleRecord a = CStyleRecord of { leftChild : Tree a, rightChild : Tree b, count : Int }"
          in result `shouldBe` []
-        
 
         it "test toplevel binding" $
          let result = process "let rec fib x = if x <= 2 then x else fib (x - 1) + fib (x - 2)"

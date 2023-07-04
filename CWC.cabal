@@ -26,8 +26,10 @@ source-repository head
 library
   exposed-modules:
       CPS
+      Lambda
       Lib
       Parsing.AST
+      Parsing.AST2Lambda
       Parsing.Lexer
       Parsing.ParserCombinator
       Parsing.ParseUtils

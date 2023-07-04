@@ -1,12 +1,4 @@
-module Parsing.AST(
-    GenericArg, 
-    Toplevel(..), 
-    Pattern(..), 
-    FieldPattern(..),
-    Type(..),
-    Mexp(..),
-    Operation(..),
-    Module(..)) where
+module TypedTree where 
 
 data Type
     = TypeVar String
