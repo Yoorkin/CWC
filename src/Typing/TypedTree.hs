@@ -1,26 +1,35 @@
-module TypedTree where 
+module Typing.TypedTree(
+    Type(..),
+    Pattern(..),
+    FieldPattern(..),
+    Texp(..),
+    Toplevel(..),
+    Binding(..),
+    Constant(..)
+) where 
+
+import qualified Parsing.AST as AST
 
 data Type
     = TypeVar String
-    | TypeApply Type Type
     | TypeTuple [Type]
-    | TypeRecord [(String, Type)]
+    | TypeRecord [String] [Type]
     | TypeArrow Type Type
+    | TypeTaggedUnion [(String,Type)]
+    | TypeHole
     deriving(Show,Eq)
 
-type GenericArg = String
-
-data Toplevel
-    = ToplevelType String [GenericArg] [(String, Type)]
-    | ToplevelLet Pattern Mexp
-    | ToplevelLetrec [String] [Mexp]
-    deriving(Show,Eq)
+type Closed = Bool
 
 data Pattern
-    = PatVar String
-    | PatTuple [Pattern]
-    | PatRecord [FieldPattern]
-    | PatConstraint Pattern Type
+    = PatVar String Type
+    | PatTuple [Pattern] Type
+    | PatRecord [String] [Pattern] Closed Type
+    | PatConstruct [Pattern] Type
+    | PatConstraint Pattern AST.TypeDesc Type
+    | PatConstant Constant Type
+    | PatHole Type
+    | PatError Type
     deriving(Show,Eq)
 
 data FieldPattern 
@@ -28,30 +37,32 @@ data FieldPattern
     | PatRest 
     deriving(Show,Eq)
 
-data Mexp
-    = Var String
-    | Abs Pattern Mexp
-    | Apply Mexp Mexp
-    | Let Pattern Mexp Mexp
-    | Letrec [String] [Mexp] Mexp
-    | If Mexp Mexp Mexp
-    | Match Mexp [(Pattern, Mexp)]
-    | Prim Operation [Mexp]
-    | Tuple [Mexp]
-    | Record [(String, Mexp)]
-    | Constraint Mexp Type
-    | Integer Int
+data Texp
+    = Var String Type
+    | Abs Pattern Texp Type
+    | Apply Texp Texp Type
+    | Let Pattern Texp Texp Type
+    | Letrec [String] [Texp] Texp Type
+    | If Texp Texp Texp Type
+    | Match Texp [(Pattern, Texp)] Type
+    | Prim AST.Operation [Texp] Type
+    | Tuple [Texp] Type
+    | Record [String] [Texp] Type
+    | Constant Constant Type
+    | Hole Type
+    | Error Type
+    deriving(Show,Eq)
+
+data Constant 
+    = Integer Int
     | Boolean Bool
-    | Float_ Float
-    | String_ String
-    | Char_ Char
+    | Float Float
+    | String String
+    | Char Char
     | Unit
     deriving(Show,Eq)
 
-data Operation
-    = OpAdd | OpSub | OpMul | OpDiv
-    | OpGT | OpGE | OpNE | OpEQ | OpLE | OpLT
-    | OpNot | OpAnd | OpOr | OpXor
-    deriving(Show,Eq)
+data Toplevel
+    = Toplevel [Binding] deriving(Show,Eq)
 
-data Module = Module [Toplevel]
+data Binding = Binding String Texp Type deriving(Show,Eq)

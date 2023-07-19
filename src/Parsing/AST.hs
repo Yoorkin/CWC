@@ -2,38 +2,48 @@ module Parsing.AST(
     GenericArg, 
     Toplevel(..), 
     Pattern(..), 
-    FieldPattern(..),
-    Type(..),
+    TypeDesc(..),
     Mexp(..),
     Operation(..),
-    Module(..)) where
+    Constant(..),
+    TypeData(..),
+    Binding(..)) where
 
-data Type
-    = TypeVar String
-    | TypeApply Type Type
-    | TypeTuple [Type]
-    | TypeRecord [(String, Type)]
-    | TypeArrow Type Type
+data TypeDesc
+    = TypeDescVar String
+    | TypeDescApply TypeDesc TypeDesc
+    | TypeDescTuple [TypeDesc]
+    | TypeDescRecord [String] [TypeDesc]
+    | TypeDescArrow TypeDesc TypeDesc
+    | TypeDescTaggedUnion [(String,TypeDesc)]
     deriving(Show,Eq)
 
 type GenericArg = String
 
-data Toplevel
-    = ToplevelType String [GenericArg] [(String, Type)]
-    | ToplevelLet Pattern Mexp
-    | ToplevelLetrec [String] [Mexp]
-    deriving(Show,Eq)
+data Toplevel = Toplevel [TypeData] [Binding] deriving(Show,Eq)
+
+data TypeData = TypeData { 
+    typeDataName :: String,
+    typeDataQuantifier :: [GenericArg],
+    typeDataDesc :: TypeDesc
+ } deriving(Show,Eq)
+
+data Binding = Binding {
+    bindingName :: String,
+    bindingType ::  TypeDesc,
+    bindingExpr :: Mexp
+ } deriving(Show,Eq)
+
+type Closed = Bool
 
 data Pattern
     = PatVar String
+    | PatHole
     | PatTuple [Pattern]
-    | PatRecord [FieldPattern]
-    | PatConstraint Pattern Type
-    deriving(Show,Eq)
-
-data FieldPattern 
-    = PatField String Pattern
-    | PatRest 
+    | PatRecord [String] [Pattern] Closed
+    | PatConstraint Pattern TypeDesc
+    | PatConstant Constant
+    | PatConstruct [Pattern]
     deriving(Show,Eq)
 
 data Mexp
@@ -46,13 +56,18 @@ data Mexp
     | Match Mexp [(Pattern, Mexp)]
     | Prim Operation [Mexp]
     | Tuple [Mexp]
-    | Record [(String, Mexp)]
-    | Constraint Mexp Type
-    | Integer Int
+    | Record [String] [Mexp]
+    | Constraint Mexp TypeDesc
+    | Constant Constant
+    | Hole
+    deriving(Show,Eq)
+
+data Constant 
+    = Integer Int
     | Boolean Bool
-    | Float_ Float
-    | String_ String
-    | Char_ Char
+    | Float Float
+    | String String
+    | Char Char
     | Unit
     deriving(Show,Eq)
 
@@ -61,5 +76,3 @@ data Operation
     | OpGT | OpGE | OpNE | OpEQ | OpLE | OpLT
     | OpNot | OpAnd | OpOr | OpXor
     deriving(Show,Eq)
-
-data Module = Module [Toplevel]

@@ -38,7 +38,7 @@ processOperators = foldl1 (<|>) . fmap (fmap TokenOp . string)
 keywords :: [String]
 keywords = [
     "let", "rec", "and", "fun", "case", "of", "data",
-    "type", "try", "with", "raise", "if", "then", "else"
+    "type", "try", "with", "raise", "if", "then", "else","in"
     ]
 
 tokens :: Parser Char Token

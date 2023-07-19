@@ -1,8 +1,9 @@
 {
-module Parsing.YmlParser where
-import Parsing.AST
+module Parsing.YmlParser(parse) where
+import Parsing.AST as AST
 import Parsing.Lexer
 import Parsing.ParseUtils
+
 }
 
 %name parse Start
@@ -31,6 +32,7 @@ import Parsing.ParseUtils
     'then' {TokenKeyword "then"}
     'else' {TokenKeyword "else"}
     'data' {TokenKeyword "data"}
+    'fun' {TokenKeyword "fun"}
     '->' {TokenOp "->"}
     ARROW {TokenOp "->"}
     '>=' {TokenOp ">="}
@@ -81,40 +83,38 @@ sepBy(x,delim) : sepBy1(x,delim) { $1 }
 endWith(x,end) : x end { $1 }
 
 
-Start : many(Toplevel) EOF { Module $1 }
+Start : many(Toplevel) EOF { 
+            let (types, bindings) = pickToplevel $1 
+            in Toplevel types bindings 
+        }
 
-Toplevel : 'data' IDENT many(IDENT) '=' sepBy1(TypeConstr,'|')  { ToplevelType $2 $3 $5 } 
-         | 'let' Pattern '=' Expr { ToplevelLet $2 $4 }
-         | 'let' IDENT Pattern '=' Expr { ToplevelLet (PatVar $2) (Abs $3 $5) } 
-         | 'let' 'rec' sepBy1(FuncBinding, 'and') { let (bs,fs) = unzip $3 
-                                                    in ToplevelLetrec bs fs } 
+Toplevel : 'data' IDENT many(IDENT) '=' TypeDesc  { TopTypeData $ TypeData { typeDataName = $2, typeDataQuantifier = $3, typeDataDesc = $5 } } 
+         | IDENT TypeAnnotation '=' Expr { TopBinding $ Binding { bindingName = $1, bindingType = $2, bindingExpr = $4 } }
 
+TypeAnnotation : ':' TypeDesc { $2 }
 
 TypeConstr : IDENT 'of' TypeDesc { ($1, $3) }
 
 
-TypeDesc : TypeDesc IDENT                    { TypeApply $1 (TypeVar $2) }
-         | IDENT                             { TypeVar $1 }
+TypeDesc : TypeDesc IDENT                    { TypeDescApply $1 (TypeDescVar $2) }
+         | IDENT                             { TypeDescVar $1 }
          | '(' sepBy(TypeDesc, ',') ')'      { case $2 of
-                                                   [] -> TypeVar "()"
+                                                   [] -> TypeDescVar "unit"
                                                    [x] -> x
-                                                   xs -> TypeTuple $2 }
-         | '{' sepBy(TypeDescField, ',') '}' { TypeRecord $2 }
-         | TypeDesc ARROW TypeDesc            { TypeArrow $1 $3 }
+                                                   xs -> TypeDescTuple $2 }
+         | '{' sepBy(TypeDescField, ',') '}' { uncurry TypeDescRecord $ processRecordFields $2 }
+         | TypeDesc '->' TypeDesc            { TypeDescArrow $1 $3 }
+         | sepBy1(TypeConstr,'|')             { TypeDescTaggedUnion $1 }
 
 TypeDescField : IDENT ':' TypeDesc { ($1, $3) }
 
 
 Pattern : IDENT { PatVar $1 }
         | '(' sepBy(Pattern, ',') ')'       { PatTuple $2 }
-        | '{' sepBy(PatternField, ',') '}'  { PatRecord $2 }
+        | '{' sepBy(PatternField, ',') '}'  { fieldPatsToRecordPattern $2 }
 
 PatternField : IDENT '=' Pattern { PatField $1 $3 }
              | '_'               { PatRest }
-
-Expr : Expr Op Expr                              { Prim (selectPrimOp $2) [$1, $3] }
-     | Expr Atom                                 { Apply $1 $2 }
-     | Atom                                      { $1 }
 
 Op : '+' { $1 } 
    | '-' { $1 }
@@ -128,25 +128,33 @@ Op : '+' { $1 }
    | '=' {$1}
 
 Binding : Pattern '=' Expr 'in' Expr          { Let $1 $3 $5 }
-        | FuncBinding 'in' Expr               { let (b,f) = $1 in Let (PatVar b) f $3 }
-        | 'rec' sepBy1(FuncBinding, 'and') 
-          'in' Expr                           { let (bs,fs) = unzip $2 in Letrec bs fs $4 }
+        -- | FuncBinding 'in' Expr               { let (b,f) = $1 in Let (PatVar b) f $3 }
+        -- | 'rec' sepBy1(FuncBinding, 'and') 
+        --   'in' Expr                           { let (bs,fs) = unzip $2 in Letrec bs fs $4 }
 
-Atom : IDENT                                     { Var $1 }
+Expr : 'fun' Pattern '->' Expr                   { Abs $2 $4 }
      | 'let' Binding                             { $2 }
      | 'if' Expr 'then' Expr 'else' Expr         { If $2 $4 $6 }
      | 'case' Expr 'of' sepBy1(MatchingCase,'|') { Match $2 $4 }
+     | Term                                      { $1 }
+
+Term : Term Op Term                              { Prim (selectPrimOp $2) [$1, $3] }
+     | Term Atom                                 { Apply $1 $2 }
+     | Atom                                      { $1 }
+
+
+Atom : IDENT                                     { Var $1 }
      | '(' sepBy(Expr,',') ')'                   { case $2 of 
-                                                      []  -> Unit
+                                                      []  -> AST.Constant Unit
                                                       [x] -> x
                                                       xs -> Tuple xs }
-     | '{' sepBy(InitField,',') '}'              { Record $2 }
+     | '{' sepBy(InitField,',') '}'              { uncurry AST.Record $ processRecordFields $2 }
      | Atom ':' TypeDesc                         { Constraint $1 $3 }
-     | INT                                       { Integer $1 }
-     | FLOAT                                     { Float_ $1 }
-     | BOOL                                      { Boolean $1 }
-     | STRING                                    { String_ $1 }
-     | CHAR                                      { Char_ $1 }
+     | INT                                       { AST.Constant $ AST.Integer $1 }
+     | FLOAT                                     { AST.Constant $ AST.Float $1 }
+     | BOOL                                      { AST.Constant $ AST.Boolean $1 }
+     | STRING                                    { AST.Constant $ AST.String $1 }
+     | CHAR                                      { AST.Constant $ AST.Char $1 }
      
 
 MatchingCase : Pattern '->' Expr { ($1, $3) }
