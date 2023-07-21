@@ -30,7 +30,7 @@ main = hspec $ do
         let tast = Bidi.checkToplevelType ctx result
 
         it "test bidi-check of toplevel binding" $
-           tast `shouldBe` Right ""
+           tast `shouldBe` Right []
 
      
 

@@ -13,7 +13,7 @@ import Data.Functor(($>))
 import Control.Monad (zipWithM)
 import Parsing.AST (Binding(bindingType))
 
-type W a = Writer.Writer String a
+type W a = Writer.Writer [String] a
 
 -- data Diagnostic
 --     = TypeMismatch { expectedType :: Typed.Type, encountedType :: Typed.Type }
@@ -34,7 +34,7 @@ checkType ctx (AST.If cond ifso ifnot) t = do
 checkType ctx (AST.Tuple vs) ty@(Typed.TypeTuple tys) =
     if length vs == length tys
         then Typed.Tuple <$> zipWithM (checkType ctx) vs tys <*> pure ty
-        else Writer.tell ("tuple size is not " ++ show (length tys)) 
+        else Writer.tell ["tuple size is not " ++ show (length tys)]
              $> Typed.Error ty
 
 checkType ctx (AST.Match cond cases) ty =
@@ -64,13 +64,13 @@ checkType ctx expr ty = do
     let ty' = Context.typeOfTexp expr'
     if ty' == ty 
         then pure expr' 
-        else Writer.tell ("type error: " ++ show ty' ++ " not equal to " ++ show ty ++ "\n") $> expr'
+        else Writer.tell ["type error: " ++ show ty' ++ " not equal to " ++ show ty ++ "\n"] $> expr'
 
 inferType ctx (AST.Var x) =
     case Context.find x ctx of
         Just ty -> pure $ Typed.Var x ty
         Nothing -> do
-            Writer.tell $ "variable " ++ show x ++ " not found"
+            Writer.tell ["variable " ++ show x ++ " not found"]
             pure $ Typed.Error Builtin.errorType
 
 inferType ctx (AST.Apply m1 m2) = do
@@ -79,7 +79,7 @@ inferType ctx (AST.Apply m1 m2) = do
         (Typed.TypeArrow t1 t2) -> do
             m2'<- checkType ctx m2 t2
             pure $ Typed.Apply m1' m2' t2
-        _ -> Writer.tell "applied term is not a function" 
+        _ -> Writer.tell ["applied term is not a function"]
              $> Typed.Error Builtin.errorType
 
 inferType ctx (AST.Constraint m desc) =
@@ -92,7 +92,7 @@ inferType ctx (AST.Record labels exprs) =
         Just rcdTy@(Typed.TypeRecord _ tys) -> do
             exprs' <- zipWithM (checkType ctx) exprs tys
             pure $ Typed.Record labels exprs' rcdTy
-        _ -> Writer.tell "record type not found" 
+        _ -> Writer.tell ["record type not found"]
              $> Typed.Error Builtin.errorType
 
 inferType ctx (AST.Prim op args) = 
@@ -134,7 +134,7 @@ inferPatternType ctx (AST.PatRecord labels pats closed) =
         Just ty@(Typed.TypeRecord _ tys) -> do 
             pats' <- zipWithM (checkPatternType ctx) pats tys
             pure $ Typed.PatRecord labels pats' closed ty
-        _ -> Writer.tell "record not found" $> Typed.PatError Builtin.errorType
+        _ -> Writer.tell ["record not found"] $> Typed.PatError Builtin.errorType
 
 inferPatternType ctx (AST.PatConstant c) =
     pure $ uncurry Typed.PatConstant $ case c of
@@ -146,7 +146,7 @@ inferPatternType ctx (AST.PatConstant c) =
 
 inferPatternType ctx pat = error $ "unexpected " ++ show pat
 
-checkToplevelType :: Context.Context -> AST.Toplevel -> Either Typed.Toplevel String
+checkToplevelType :: Context.Context -> AST.Toplevel -> Either Typed.Toplevel [String]
 checkToplevelType ctx (AST.Toplevel _ bindings) =
     let (tops, errs) = Writer.runWriter $ mapM checkBindingType bindings
     in if null errs then Left $ Typed.Toplevel tops else Right $ errs
