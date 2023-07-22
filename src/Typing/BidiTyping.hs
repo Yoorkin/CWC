@@ -11,7 +11,6 @@ import qualified Typing.Builtin as Builtin
 import qualified Control.Monad.Writer as Writer
 import Data.Functor(($>))
 import Control.Monad (zipWithM)
-import Parsing.AST (Binding(bindingType))
 
 type W a = Writer.Writer [String] a
 

@@ -76,3 +76,34 @@ data Operation
     | OpGT | OpGE | OpNE | OpEQ | OpLE | OpLT
     | OpNot | OpAnd | OpOr | OpXor
     deriving(Show,Eq)
+
+-- instance Show Mexp where
+--     show (Var str) = str
+--     show (Abs pat expr) = "fun " ++ show pat ++ " -> " ++ show expr
+--     show (Apply m1 m2) = show m1 ++ "(" ++ show m2 ++ ")"
+--     show (Let pat expr body) = "let " ++ show pat ++ " = " ++ show expr ++ " in " ++ show expr
+--     show (Letrec)
+
+-- instance Show Constant where
+--     show (Integer x) = show x
+--     show (Boolean x) = show x
+--     show (Float x) = show x
+--     show (String x) = show x
+--     show (Char x) = show x
+--     show Unit = "()"
+
+-- instance Show Operation where
+--     show OpAdd = "+"
+--     show OpSub = "-"
+--     show OpMul = "*"
+--     show OpDiv = "/"
+--     show OpGT = ">"
+--     show OpGE = ">="
+--     show OpNE = "<>"
+--     show OpEQ = "=="
+--     show OpLE = "<="
+--     show OpLT = "<"
+--     show OpNot = "not"
+--     show OpAnd = "and"
+--     show OpOr = "or"
+--     show OpXor = "xor"

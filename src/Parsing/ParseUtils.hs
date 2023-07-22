@@ -24,11 +24,13 @@ selectPrimOp (TokenOp x) =
         "-" -> OpSub
         "*" -> OpMul
         "/" -> OpDiv
-        ">=" -> OpGT
-        "<=" -> OpLT
+        ">" -> OpGT
+        "<" -> OpLT
+        ">=" -> OpGE
+        "<=" -> OpLE
         "=" -> OpEQ
         "<>" -> OpNE
-        _ -> error ""
+        _ -> error $ show x
 selectPrimOp _ = error ""
 
 
