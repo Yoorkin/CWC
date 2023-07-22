@@ -20,6 +20,9 @@ intSubType = intAddType
 intMulType = intAddType
 intDivType = intAddType
 
+intGTType = intType |-> intType |-> boolType
+intLEType = intGTType
+
 intNegType = intType |-> intType
 
 typeOfPrimOp :: AST.Operation -> Typed.Type
@@ -28,5 +31,7 @@ typeOfPrimOp op =
         AST.OpLT -> intType |-> intType |-> boolType
         AST.OpAdd -> intAddType
         AST.OpSub -> intSubType
+        AST.OpGT -> intGTType
+        AST.OpLE -> intLEType
         _ -> error $ "unexpected " ++ show op 
 

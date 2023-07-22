@@ -8,7 +8,8 @@ module Typing.TypeContext(
     findByLabels,
     rightMostType,
     typeOfTexp,
-    typeOfTpat
+    typeOfTpat,
+    addPatternVars
 ) where
 
 
@@ -90,4 +91,16 @@ rightMostType :: Typed.Type -> Typed.Type
 rightMostType (Typed.TypeArrow _ r) = rightMostType r
 rightMostType x = x
 
-
+addPatternVars :: Typed.Pattern -> Context -> Context
+addPatternVars pat ctx = 
+    case pat of
+        Typed.PatVar name ty -> add name ty ctx
+        Typed.PatTuple elems _ -> loop elems ctx
+        Typed.PatRecord _ pats _ _ -> loop pats ctx
+        Typed.PatConstruct pats _ -> loop pats ctx
+        Typed.PatConstraint pat _ _ -> addPatternVars pat ctx
+        Typed.PatHole _ -> ctx
+        Typed.PatError _ -> ctx
+    where 
+        loop [] ctx = ctx
+        loop (x:xs) ctx = loop xs (addPatternVars x ctx)

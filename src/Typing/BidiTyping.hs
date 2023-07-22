@@ -20,9 +20,11 @@ type W a = Writer.Writer [String] a
 checkType :: Context.Context -> AST.Mexp -> Typed.Type -> W Typed.Texp
 inferType :: Context.Context -> AST.Mexp -> W Typed.Texp
 
-checkType ctx (AST.Abs (AST.PatVar x) m) ty@(Typed.TypeArrow t1 t2) = do
-    m' <- checkType (Context.add x t1 ctx) m t2
-    pure $ Typed.Abs (Typed.PatVar x t1) m' ty
+checkType ctx (AST.Abs pat expr) ty@(Typed.TypeArrow t1 t2) = do
+    pat' <- checkPatternType ctx pat t1
+    let ctx' = Context.addPatternVars pat' ctx
+    expr' <- checkType ctx' expr t2
+    pure $ Typed.Abs pat' expr' ty
 
 checkType ctx (AST.If cond ifso ifnot) t = do
     cond' <- checkType ctx cond Builtin.boolType

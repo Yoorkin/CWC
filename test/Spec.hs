@@ -25,10 +25,10 @@ data PipelineTest =
 
 instance Show PipelineTest where
   show PipelineTest{testName = n, testTokens = t, testAST = ast, testTypedAST = tast } =
-    "pipeline test '" ++ n ++ "':\n" ++
-    ">>tokens:\n" ++ show t ++
-    ">>ast:\n" ++ show ast ++ 
-    ">>tast:\n" ++ show tast ++
+    "pipeline test '" ++ n ++ "':" ++
+    "\n>> tokens:\n" ++ show t ++
+    "\n>> ast:\n" ++ show ast ++ 
+    "\n>> tast:\n" ++ show tast ++
     "\n" 
 
 readSource :: String -> IO String
