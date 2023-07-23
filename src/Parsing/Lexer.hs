@@ -37,7 +37,7 @@ processOperators = foldl1 (<|>) . fmap (fmap TokenOp . string)
 
 keywords :: [String]
 keywords = [
-    "let", "rec", "and", "fun", "case", "of", "data",
+    "let", "rec", "and", "fun", "case", "of", "data", "forall",
     "type", "try", "with", "raise", "if", "then", "else","in"
     ]
 
@@ -56,7 +56,7 @@ tokens = do
         <|> TokenInt <$> integer
         <|> processOperators [
             "=>","->",
-            ">=", "<=", "=", "<>", ",", "[", "]","{","}",
+            ">=", "<=", "=", "<>", ",", "[", "]", "{", "}", ".",
             "+", "-", "*", "/", "(", ")", "<", ">", ":", "|"
         ]
 

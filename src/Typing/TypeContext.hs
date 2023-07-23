@@ -84,6 +84,8 @@ typeOfDesc (AST.TypeDescRecord labels descs) =
 typeOfDesc (AST.TypeDescTaggedUnion unions) =
     let (tags,descs) = unzip unions
     in Typed.TypeTaggedUnion (zip tags (map typeOfDesc descs))
+typeOfDesc (AST.TypeDescAbstraction tyVars ty) = 
+    Typed.TypeAbstraction tyVars (typeOfDesc ty)
 typeOfDesc _ = error "ababab"
 
 

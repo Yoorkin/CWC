@@ -14,6 +14,8 @@ data Type
     = TypeVar String
     | TypeTuple [Type]
     | TypeRecord [String] [Type]
+    | TypeApply Type [Type]
+    | TypeAbstraction [String] Type
     | TypeArrow Type Type
     | TypeTaggedUnion [(String,Type)]
     | TypeHole

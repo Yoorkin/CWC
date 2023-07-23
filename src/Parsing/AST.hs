@@ -12,9 +12,10 @@ module Parsing.AST(
 data TypeDesc
     = TypeDescVar String
     | TypeDescApply TypeDesc TypeDesc
+    | TypeDescAbstraction [String] TypeDesc
+    | TypeDescArrow TypeDesc TypeDesc
     | TypeDescTuple [TypeDesc]
     | TypeDescRecord [String] [TypeDesc]
-    | TypeDescArrow TypeDesc TypeDesc
     | TypeDescTaggedUnion [(String,TypeDesc)]
     deriving(Show,Eq)
 
@@ -54,9 +55,10 @@ data Mexp
     | Letrec [String] [Mexp] Mexp
     | If Mexp Mexp Mexp
     | Match Mexp [(Pattern, Mexp)]
-    | Prim Operation [Mexp]
     | Tuple [Mexp]
     | Record [String] [Mexp]
+    | Prim Operation [Mexp]
+    | Instantiate Mexp [TypeDesc]
     | Constraint Mexp TypeDesc
     | Constant Constant
     | Hole

@@ -33,6 +33,7 @@ import Parsing.ParseUtils
     'else' {TokenKeyword "else"}
     'data' {TokenKeyword "data"}
     'fun' {TokenKeyword "fun"}
+    "forall" {TokenKeyword "forall"}
     '->' {TokenOp "->"}
     ARROW {TokenOp "->"}
     '>=' {TokenOp ">="}
@@ -54,6 +55,7 @@ import Parsing.ParseUtils
     '>' {TokenOp ">"}
     ':' {TokenOp ":"}
     '|' {TokenOp "|"}
+    '.' {TokenOp "."}
     '_' {TokenKeyword "_"}
 
 %nonassoc 'of' 'in'      
@@ -105,6 +107,7 @@ TypeDesc : TypeDesc IDENT                    { TypeDescApply $1 (TypeDescVar $2)
          | '{' sepBy(TypeDescField, ',') '}' { uncurry TypeDescRecord $ processRecordFields $2 }
          | TypeDesc '->' TypeDesc            { TypeDescArrow $1 $3 }
          | sepBy1(TypeConstr,'|')             { TypeDescTaggedUnion $1 }
+         | "forall" sepBy1(IDENT,',') '->' TypeDesc  { TypeDescAbstraction $2 $4 }
 
 TypeDescField : IDENT ':' TypeDesc { ($1, $3) }
 
@@ -140,6 +143,7 @@ Expr : 'fun' Pattern '->' Expr                   { Abs $2 $4 }
 
 Term : Term Op Term                              { Prim (selectPrimOp $2) [$1, $3] }
      | Term Atom                                 { Apply $1 $2 }
+     | Term '[' sepBy1(TypeDesc,',') ']'         { Instantiate $1 $3 }
      | Atom                                      { $1 }
 
 

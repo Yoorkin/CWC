@@ -115,7 +115,7 @@ inferType _ (AST.Constant c) =
         AST.Char x -> (Typed.Char x, Builtin.charType)
         AST.Unit -> (Typed.Unit, Builtin.unitType) 
 
-inferType _ expr = error $ "unexpected " ++ show expr
+inferType _ expr = error $ "unexpected infer: " ++ show expr
 
 checkPatternType :: Context.Context -> AST.Pattern -> Typed.Type -> W Typed.Pattern
 inferPatternType :: Context.Context -> AST.Pattern -> W Typed.Pattern
