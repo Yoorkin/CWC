@@ -54,7 +54,7 @@ data Mexp
     | Let Pattern Mexp Mexp
     | Letrec [String] [Mexp] Mexp
     | If Mexp Mexp Mexp
-    | Match Mexp [(Pattern, Mexp)]
+    | Match Mexp [Pattern] [Mexp]
     | Tuple [Mexp]
     | Record [String] [Mexp]
     | Prim Operation [Mexp]

@@ -10,6 +10,8 @@ module Typing.TypedTree(
 
 import qualified Parsing.AST as AST
 
+
+
 data Type
     = TypeVar String
     | TypeTuple [Type]
@@ -46,7 +48,7 @@ data Texp
     | Let Pattern Texp Texp Type
     | Letrec [String] [Texp] Texp Type
     | If Texp Texp Texp Type
-    | Match Texp [(Pattern, Texp)] Type
+    | Match Texp [Pattern] [Texp] Type
     | Prim AST.Operation [Texp] Type
     | Tuple [Texp] Type
     | Record [String] [Texp] Type

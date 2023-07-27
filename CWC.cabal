@@ -37,6 +37,7 @@ library
       Pipeline
       Typing.BidiTyping
       Typing.Builtin
+      Typing.HMTyping
       Typing.TypeContext
       Typing.TypedTree
   other-modules:

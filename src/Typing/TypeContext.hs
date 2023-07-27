@@ -7,9 +7,12 @@ module Typing.TypeContext(
     typeOfDesc,
     findByLabels,
     rightMostType,
+    leftSeqType,
     typeOfTexp,
     typeOfTpat,
-    addPatternVars
+    addPatternVars,
+    decomposeArrowType,
+    composeArrowType
 ) where
 
 
@@ -20,6 +23,7 @@ import Data.List (groupBy)
 import qualified Typing.Builtin as Builtin
 import Parsing.AST (TypeData(typeDataName))
 import Data.Maybe
+import qualified Control.Arrow as Typed
 
 
 typeOfTexp :: Typed.Texp -> Typed.Type
@@ -92,6 +96,20 @@ typeOfDesc _ = error "ababab"
 rightMostType :: Typed.Type -> Typed.Type
 rightMostType (Typed.TypeArrow _ r) = rightMostType r
 rightMostType x = x
+
+leftSeqType :: Typed.Type -> [Typed.Type]
+leftSeqType (Typed.TypeArrow l r) = l : leftSeqType r  
+leftSeqType _ = []
+
+decomposeArrowType :: Typed.Type -> ([Typed.Type], Typed.Type)
+decomposeArrowType ty@(Typed.TypeArrow _ _) = loop ty []
+        where loop (Typed.TypeArrow l r) args = loop r (l : args)
+              loop ret args = (args,ret) 
+decomposeArrowType x = error $ show x ++ " is not a arrow type"
+
+composeArrowType :: [Typed.Type] -> Typed.Type -> Typed.Type
+composeArrowType (arg:args) ret = Typed.TypeArrow arg (composeArrowType args ret)
+composeArrowType _ ret = ret
 
 addPatternVars :: Typed.Pattern -> Context -> Context
 addPatternVars pat ctx = 
