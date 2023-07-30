@@ -27,6 +27,7 @@ dependencies:
 - mtl
 - lens
 - pretty-simple
+- text
 
 ghc-options:
 - -Wall

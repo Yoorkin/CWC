@@ -22,7 +22,6 @@ typeOfTexp (Typed.If _ _ _ ty) = ty
 typeOfTexp (Typed.Match _ _ _ ty) = ty
 typeOfTexp (Typed.Prim _ _ ty) = ty
 typeOfTexp (Typed.Tuple _ ty) = ty
-typeOfTexp (Typed.Record _ _ ty) = ty
 typeOfTexp (Typed.Constant _ ty) = ty
 typeOfTexp (Typed.Hole ty) = ty
 typeOfTexp (Typed.Error ty) = ty
@@ -30,7 +29,7 @@ typeOfTexp (Typed.Error ty) = ty
 typeOfTpat :: Typed.Pattern -> Typed.Type
 typeOfTpat (Typed.PatVar _ ty) = ty
 typeOfTpat (Typed.PatTuple _ ty) = ty
-typeOfTpat (Typed.PatConstr _ ty) = ty
+typeOfTpat (Typed.PatConstr _ _ ty) = ty
 typeOfTpat (Typed.PatConstant _ ty) = ty
 typeOfTpat (Typed.PatHole ty) = ty
 
@@ -68,7 +67,7 @@ typeOfAnno x = case x of
     (AST.AnnoVar x) -> Typed.TypeVar x
     (AST.AnnoArrow x y) -> Typed.TypeArrow (typeOfAnno x) (typeOfAnno y)
     (AST.AnnoTuple elems) -> Typed.TypeTuple (map typeOfAnno elems)
-    (AST.AnnoConstr name desc) -> Typed.TypeConstr name (map typeOfAnno desc)
+    (AST.AnnoTypeConstr scheme vars) -> Typed.TypeConstruction scheme (typeOfAnno vars)
     _ -> error "ababab"
 
 -- rightMostType :: Typed.Type -> Typed.Type
@@ -94,9 +93,10 @@ addPatternVars pat ctx =
     case pat of
         Typed.PatVar name ty -> add name ty ctx
         Typed.PatTuple elems _ -> loop elems ctx
-        Typed.PatConstr pats _ -> loop pats ctx
+        Typed.PatConstr _ pat' _  -> addPatternVars pat' ctx
         Typed.PatHole _ -> ctx
         Typed.PatError _ -> ctx
+        Typed.PatConstant _ _ -> ctx
     where 
         loop [] ctx = ctx
         loop (x:xs) ctx = loop xs (addPatternVars x ctx)

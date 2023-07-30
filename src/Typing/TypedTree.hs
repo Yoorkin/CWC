@@ -1,43 +1,36 @@
-module Typing.TypedTree(
-    Type(..),
-    Pattern(..),
-    FieldPattern(..),
-    Texp(..),
-    Toplevel(..),
-    Binding(..),
-    Constant(..),
-    Scheme(..)
-) where 
+module Typing.TypedTree
+    ( Type(..)
+    , Pattern(..)
+    , Texp(..)
+    , Constant(..)
+    ) where 
 
 import qualified Parsing.AST as AST
 
--- id : forall a . a -> a
-data Scheme 
-    = Scheme [String] Type
-    deriving(Show)
+type SchemeVar = String
+type Scheme = String
 
 data Type
     = TypeVar String
     | TypeTuple [Type]
     | TypeArrow Type Type
-    | TypeConstr String [Type]
+    -- forall-elim
+    -- Represent type construction like `Map (K,V)` or `Set K`.
+    -- Do not use to denote the type of value construction, e.g `Tree (Leaf 1,Leaf 2)`.
+    | TypeConstruction Scheme Type
+    -- forall-intro
+    -- id : forall a . a -> a
+    | TypeScheme [SchemeVar] Type
     | TypeHole
     deriving(Show,Eq)
-
-type Closed = Bool
 
 data Pattern
     = PatVar String Type
     | PatTuple [Pattern] Type
-    | PatConstr [Pattern] Type
+    | PatConstr String Pattern Type
     | PatConstant Constant Type
     | PatHole Type
     | PatError Type
-    deriving(Show,Eq)
-
-data FieldPattern 
-    = PatField String Pattern
-    | PatRest 
     deriving(Show,Eq)
 
 data Texp
@@ -48,9 +41,9 @@ data Texp
     | Letrec [String] [Texp] Texp Type
     | If Texp Texp Texp Type
     | Match Texp [Pattern] [Texp] Type
-    | Prim AST.Operation [Texp] Type
     | Tuple [Texp] Type
-    | Record [String] [Texp] Type
+    | Prim AST.Operation [Texp] Type
+    | Constr String Texp Type
     | Constant Constant Type
     | Hole Type
     | Error Type
@@ -64,8 +57,3 @@ data Constant
     | Char Char
     | Unit
     deriving(Show,Eq)
-
-data Toplevel
-    = Toplevel [Binding] deriving(Show,Eq)
-
-data Binding = Binding String Texp Type deriving(Show,Eq)

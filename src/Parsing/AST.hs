@@ -1,22 +1,22 @@
-module Parsing.AST(
-    Program(..), 
-    DataType(..), 
-    Constructor(..),
-    Pattern(..), 
-    Annotation(..),
-    Mexp(..),
-    Operation(..),
-    Constant(..)) where
+module Parsing.AST
+    ( Program(..)
+    , DataType(..) 
+    , Constructor(..)
+    , Pattern(..) 
+    , Annotation(..)
+    , Mexp(..)
+    , Operation(..)
+    , Constant(..)
+    ) where
 
 data Program 
     = Program [DataType] Mexp 
     deriving(Show,Eq)
 
-type TypeVar = String
-type TypeConstr = String
+type SchemeVar = String
 
 data DataType 
-    = DataType String [TypeVar] [Constructor] 
+    = DataType String [SchemeVar] [Constructor] 
     deriving(Show,Eq)
 
 data Constructor
@@ -27,32 +27,40 @@ data Annotation
     = AnnoVar String
     | AnnoTuple [Annotation]
     | AnnoArrow Annotation Annotation
-    | AnnoConstr String [Annotation]
+    -- use `AnnoConstr "Map" (AnnoTuple [AnnoVar "K", AnnoVar "V"])` to represent type construction `Map(K,V)`
+    | AnnoTypeConstr String Annotation
     deriving(Show,Eq)
 
 data Pattern
     = PatVar String
-    | PatHole
     | PatTuple [Pattern]
-    -- | PatRecord [String] [Pattern] Closed
-    | PatConstraint Pattern Annotation
+    -- use `PatConstr "Tree" (PatTuple [PatVar "a", PatVar "b"])` to represent pattern `Tree(a,b)`
+    | PatConstr String Pattern
     | PatConstant Constant
-    | PatConstr [Pattern]
+    | PatConstraint Pattern Annotation
+    | PatHole
     deriving(Show,Eq)
 
 data Mexp
     = Var String
     | Abs Pattern Mexp
+    -- `Tree (Leaf 5, Leaf 6)` or `zip (ls1,ls2)` or `id 5`
+    -- Represent data construct and function application 
+    -- due to Yml cannot distinguish them by syntax
     | Apply Mexp Mexp
     | Let Pattern Mexp Mexp
     | Letrec [String] [Mexp] Mexp
     | If Mexp Mexp Mexp
     | Match Mexp [Pattern] [Mexp]
+    -- (1,2,'a')
     | Tuple [Mexp]
-    | Record [String] [Mexp]
+    -- 1 + 2
     | Prim Operation [Mexp]
+    -- t : T
     | Constraint Mexp Annotation
+    -- 114514
     | Constant Constant
+    -- _
     | Hole
     deriving(Show,Eq)
 

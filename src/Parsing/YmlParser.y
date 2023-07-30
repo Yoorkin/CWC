@@ -93,15 +93,20 @@ DataConstructor : IDENT 'of' Annotation { Constructor $1 $3 }
 
 Annotation : IDENT  { AnnoVar $1 }
            | Annotation '->' Annotation { AnnoArrow $1 $3 }
-           | IDENT many1(Annotation)  { AnnoConstr $1 $2 }
+           | IDENT Annotation  { AnnoTypeConstr $1 $2 }
            | '(' sepBy1(Annotation,',') ')' { case $2 of
                                                    [] -> AnnoVar "unit"
                                                    [x] -> x
                                                    xs -> AnnoTuple xs }
 
 Pattern : IDENT { PatVar $1 }
-        | Pattern ':' Annotation  { PatConstraint $1 $3 }
-        | '(' sepBy(Pattern, ',') ')'       { PatTuple $2 }
+        | '(' sepBy(Pattern, ',') ')'       { case $2 of
+                                                [] -> PatConstant Unit 
+                                                xs -> PatTuple xs }
+        | IDENT Pattern                     { PatConstr $1 $2 }
+        | Constant                          { PatConstant $1 }
+        | Pattern ':' Annotation            { PatConstraint $1 $3 }
+        | '_'                               { PatHole }
 
 Op : '+' { $1 } 
    | '-' { $1 }
@@ -136,12 +141,13 @@ Atom : IDENT                                     { Var $1 }
                                                       [x] -> x
                                                       xs -> Tuple xs }
      | Atom ':' Annotation                       { Constraint $1 $3 }
-     | INT                                       { AST.Constant $ AST.Integer $1 }
-     | FLOAT                                     { AST.Constant $ AST.Float $1 }
-     | BOOL                                      { AST.Constant $ AST.Boolean $1 }
-     | STRING                                    { AST.Constant $ AST.String $1 }
-     | CHAR                                      { AST.Constant $ AST.Char $1 }
-     
+     | Constant                                  { AST.Constant $1 }
+
+Constant : INT          { AST.Integer $1 }
+         | FLOAT        { AST.Float $1 }
+         | BOOL         { AST.Boolean $1 }
+         | STRING       { AST.String $1 }
+         | CHAR         { AST.Char $1 }
 
 MatchingCase : Pattern '->' Expr { ($1, $3) }
 
