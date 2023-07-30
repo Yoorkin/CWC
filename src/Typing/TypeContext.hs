@@ -26,6 +26,23 @@ typeOfTexp (Typed.Constant _ ty) = ty
 typeOfTexp (Typed.Hole ty) = ty
 typeOfTexp (Typed.Error ty) = ty
 
+updateTypeOfTexp :: Typed.Type -> Typed.Texp -> Typed.Texp 
+updateTypeOfTexp ty expr = 
+    case expr of
+        (Typed.Var a _) -> Typed.Var a ty
+        (Typed.Abs a b _) -> Typed.Abs a b ty
+        (Typed.Apply a b _) -> Typed.Apply a b ty
+        (Typed.Let a b c _) -> Typed.Let a b c ty
+        (Typed.Letrec a b c _) -> Typed.Letrec a b c ty
+        (Typed.If a b c _) -> Typed.If a b c ty
+        (Typed.Match a b c _) -> Typed.Match a b c ty
+        (Typed.Prim a b _) -> Typed.Prim a b ty
+        (Typed.Tuple a _) -> Typed.Tuple a ty
+        (Typed.Constant a _) -> Typed.Constant a ty
+        (Typed.Hole _) -> Typed.Hole ty
+        (Typed.Error _) -> Typed.Error ty
+
+
 typeOfTpat :: Typed.Pattern -> Typed.Type
 typeOfTpat (Typed.PatVar _ ty) = ty
 typeOfTpat (Typed.PatTuple _ ty) = ty

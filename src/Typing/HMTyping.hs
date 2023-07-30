@@ -36,7 +36,8 @@ makeLenses ''UnifyCtx
 data Result = Result
     { resultExpr :: Typ.Texp
     , resultCtx :: UnifyCtx
-    , resultConstr :: [Constraint]
+    , resultSolution :: [Constraint]
+    , resultRewrited :: Typ.Texp
     } deriving(Show)
 
 typing :: AST.Program -> Result
@@ -48,12 +49,42 @@ typing (AST.Program datas expr) =
             , _bindings = Map.fromList $ scanDataTypes datas
             }
         (exp,ctx) = runState (constraint expr) initialCtx
-    in Result exp ctx (unify (ctx^.constraints) [])
+        solution = unify (ctx^.constraints) []
+        rewritedExp = rewriteBySolution solution exp
+    in Result exp ctx solution rewritedExp
 
 -- typingWithInitialContext :: UnifyCtx -> AST.Mexp -> Result 
 -- typingWithInitialContext ctx expr = 
 --     let (expr', ctx) = runState (constraint expr) ctx
 --     in 
+
+rewriteBySolution :: [Constraint] -> Typ.Texp -> Typ.Texp
+rewriteBySolution [] exp = exp 
+rewriteBySolution ((a, b) : solution) exp = rewriteBySolution solution (rewriteTexp exp)
+    where rewriteTexp expr =
+            case expr of
+                (Typ.Var s ty) -> Typ.Var s (rewriteType a b ty)
+                (Typ.Abs p e ty) -> Typ.Abs (rewriteTpat p) (rewriteTexp e) (rewriteTyp ty)
+                (Typ.Apply e1 e2 ty) -> Typ.Apply (rewriteTexp e1) (rewriteTexp e2) (rewriteTyp ty)
+                (Typ.Let p e1 e2 ty) -> Typ.Let (rewriteTpat p) (rewriteTexp e1) (rewriteTexp e2) (rewriteTyp ty)
+                (Typ.If e1 e2 e3 ty) -> Typ.If (rewriteTexp e1) (rewriteTexp e2) (rewriteTexp e3) (rewriteTyp ty)
+                (Typ.Match e pats exprs ty) -> Typ.Match (rewriteTexp e) (map rewriteTpat pats) (map rewriteTexp exprs) (rewriteTyp ty)
+                (Typ.Tuple exprs ty) -> Typ.Tuple (map rewriteTexp exprs) (rewriteTyp ty)
+                (Typ.Prim op exprs ty) -> Typ.Prim op (map rewriteTexp exprs) (rewriteTyp ty)
+                (Typ.Constr s e ty) -> Typ.Constr s (rewriteTexp e) (rewriteTyp ty)
+                (Typ.Constant c ty) -> Typ.Constant c (rewriteTyp ty)
+                (Typ.Hole ty) -> Typ.Hole (rewriteTyp ty)
+                (Typ.Error ty) -> Typ.Error (rewriteTyp ty)
+                _ -> error "" 
+          rewriteTpat pat =
+            case pat of
+                (Typ.PatVar s ty) -> Typ.PatVar s (rewriteTyp ty)
+                (Typ.PatTuple pats ty) -> Typ.PatTuple (map rewriteTpat pats) (rewriteTyp ty)
+                (Typ.PatConstr s pat ty) -> Typ.PatConstr s (rewriteTpat pat) (rewriteTyp ty)
+                (Typ.PatConstant c ty) -> Typ.PatConstant c (rewriteTyp ty)
+                (Typ.PatHole ty) -> Typ.PatHole (rewriteTyp ty)
+                (Typ.PatError ty) -> Typ.PatError (rewriteTyp ty)
+          rewriteTyp = rewriteType a b
 
 
 scanDataTypes :: [AST.DataType] -> [(String, [Binding])]
@@ -190,7 +221,7 @@ constraint (AST.Apply func arg) = do
             _ -> Ctx.typeOfTexp func'
     let expectedFuncTy = Typ.TypeArrow (Ctx.typeOfTexp arg') x
     push [actualFuncTy, expectedFuncTy]
-    return $ Typ.Apply func' arg' x
+    return $ Typ.Apply (Ctx.updateTypeOfTexp actualFuncTy func') arg' x
 
 constraint (AST.Let pat expr body) = do
     pat' <- constraintPattern pat

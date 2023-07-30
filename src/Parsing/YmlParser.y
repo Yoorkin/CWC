@@ -71,13 +71,13 @@ option(x) : x  { Just $1 }
           |    { Nothing }
 
 many(x) :            { [] }
-        | many(x) x  { $2 : $1 }
+        | x many(x)  { $1 : $2 }
 
 many1(x) : x           { [$1] }
-         | many1(x) x  { $2 : $1 }
+         | x many1(x)  { $1 : $2 }
 
 sepBy1(x,delim) : x                       { [ $1 ] }
-                | sepBy1(x,delim) delim x { $3 : $1 }
+                | x delim sepBy1(x,delim)  { $1 : $3 }
 
 sepBy(x,delim) : sepBy1(x,delim) { $1 }
                |                 { [] }
