@@ -6,6 +6,7 @@ import qualified Typing.TypedTree as Typ
 import qualified Typing.Builtin as Builtin
 import qualified Typing.TypeContext as Ctx
 import qualified Data.Map as Map
+import Debug.Trace
 import Text.Pretty.Simple
 import qualified Data.Text.Lazy as Text
 import Control.Monad.State.Lazy as State
@@ -14,7 +15,7 @@ import Data.Maybe
 
 type Constraint = (Typ.Type, Typ.Type)
 
-data BindingKind = LetBinding | DataConstructor deriving(Show,Eq)
+data BindingKind = LetBinding | PolyFunction | DataConstructor deriving(Show,Eq)
 
 data Binding = Binding
     { _bindingName :: String
@@ -40,7 +41,7 @@ data Result = Result
     , resultRewrited :: Typ.Texp
     } deriving(Show)
 
-typing :: AST.Program -> Result
+typing :: AST.Program -> Typ.Program
 typing (AST.Program datas expr) =
     let initialCtx = UnifyCtx
             { _usedNameCount = 0
@@ -48,10 +49,15 @@ typing (AST.Program datas expr) =
             , _patternVars = []
             , _bindings = Map.fromList $ scanDataTypes datas
             }
-        (exp,ctx) = runState (constraint expr) initialCtx
-        solution = unify (ctx^.constraints) []
-        rewritedExp = rewriteBySolution solution exp
-    in Result exp ctx solution rewritedExp
+     in Typ.Program datas (typingExpr initialCtx expr)
+
+typingExpr :: UnifyCtx -> AST.Mexp -> Typ.Texp 
+typingExpr initialCtx expr = 
+    let (expr',ctx) = runState (constraint expr) initialCtx
+        solution = trace (Text.unpack $ pShow (ctx,expr')) $ unify (ctx^.constraints) []
+        rewrited = rewriteBySolution solution expr'
+    in rewrited
+    --  in trace (Text.unpack $ pShow (Result expr' ctx solution rewrited)) rewrited
 
 -- typingWithInitialContext :: UnifyCtx -> AST.Mexp -> Result 
 -- typingWithInitialContext ctx expr = 
@@ -225,19 +231,23 @@ constraint (AST.Apply func arg) = do
 
 constraint (AST.Let pat expr body) = do
     pat' <- constraintPattern pat
+    expr' <- case (pat,expr) of
+                (AST.PatVar name, AST.Abs _ _) -> do
+                    ctx <- State.get
+                    let letPolyCtx = ctx
+                            { _constraints = []
+                            , _patternVars = []
+                            }
+                    let typedExpr = typingExpr letPolyCtx expr
+                    let genFuncTy = generalize (Ctx.typeOfTexp typedExpr)
+                    patternVars .= [Binding name genFuncTy PolyFunction]
+                    return $ Ctx.updateTypeOfTexp genFuncTy typedExpr
+                _ -> do constraint expr
+    push [Ctx.typeOfTpat pat', Ctx.typeOfTexp expr']
     fv <- use patternVars
-    expr' <- constraint expr
-    -- case expr' of
-    --     Typ.Abs _ -> do
-    --             fns <- use functions
-
-    --     _ -> do 
-            -- patternFreeVars .= []
-            -- pushBindings fv
     patternVars .= []
     pushBindings fv
     body' <- constraint body
-    push [Ctx.typeOfTpat pat', Ctx.typeOfTexp expr']
     popBindings (map (^.bindingName) fv)
     let ty = Ctx.typeOfTexp body'
     return $ Typ.Let pat' expr' body' ty
@@ -313,7 +323,7 @@ unify (c@(a,b):cs) acc = case c of
     -- (Typ.TypeScheme _ _, _) -> unify cs (c:acc)
     (Typ.TypeHole, _) -> unify cs acc
     (_, Typ.TypeHole) -> unify cs acc
-    _ -> error $ "cannot unify " ++ Text.unpack (pShow c)
+    _ -> error $ "cannot unify " ++ Text.unpack (pShow c) ++ "\n <!> constraints: \n" ++ Text.unpack (pShow $ cs ++ acc)
 
 rewriteType :: Typ.Type -> Typ.Type -> Typ.Type -> Typ.Type
 rewriteType a b = go 
@@ -329,15 +339,28 @@ rewriteConstraint :: Typ.Type -> Typ.Type -> [Constraint] -> [Constraint]
 rewriteConstraint a b cs = fmap (\(x,y) -> (replace' x, replace' y)) cs
         where replace' = rewriteType a b
 
+rmdups :: Eq a => [a] -> [a]
+rmdups [] = []
+rmdups (x : xs) = x : rmdups (filter (/= x) xs)
+
 free :: Typ.Type -> [String]
-free (Typ.TypeVar var@('\'' : a)) = [var]
-free (Typ.TypeVar _) = []
-free (Typ.TypeTuple xs) = concatMap free xs
-free (Typ.TypeArrow x y) = free x ++ free y
-free (Typ.TypeConstruction _ ty) = free ty
-free (Typ.TypeScheme _ ty) = free ty
-free Typ.TypeHole = []
+free ty = rmdups (go ty)
+    where
+        go (Typ.TypeVar var@('\'' : a)) = [var]
+        go (Typ.TypeVar _) = []
+        go (Typ.TypeTuple xs) = concatMap go xs
+        go (Typ.TypeArrow x y) = go x ++ go y
+        go (Typ.TypeConstruction _ ty) = go ty
+        go (Typ.TypeScheme _ ty) = go ty
+        go Typ.TypeHole = []
 
 
-
+generalize :: Typ.Type -> Typ.Type 
+generalize ty =  case free ty of
+                    [] -> ty
+                    tyVars -> let genVars = map typeVar2genVar tyVars 
+                          in Typ.TypeScheme genVars (rewriteTypeVars tyVars genVars ty)
+    where typeVar2genVar ('\'':var) = var
+          rewriteTypeVars [] [] ty = ty
+          rewriteTypeVars (tyVar:tyVars) (genVar:genVars) ty = rewriteTypeVars tyVars genVars (rewriteType (Typ.TypeVar tyVar) (Typ.TypeVar genVar) ty)
 

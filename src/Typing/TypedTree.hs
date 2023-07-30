@@ -3,6 +3,7 @@ module Typing.TypedTree
     , Pattern(..)
     , Texp(..)
     , Constant(..)
+    , Program(..)
     ) where 
 
 import qualified Parsing.AST as AST
@@ -56,4 +57,8 @@ data Constant
     | String String
     | Char Char
     | Unit
+    deriving(Show,Eq)
+
+data Program 
+    = Program [AST.DataType] Texp 
     deriving(Show,Eq)

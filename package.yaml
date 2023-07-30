@@ -29,6 +29,7 @@ dependencies:
 - pretty-simple
 - text
 
+
 ghc-options:
 - -Wall
 - -Wcompat
