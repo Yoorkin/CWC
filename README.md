@@ -7,5 +7,7 @@ exercise of Compiling With Continuations and some PLDI ideas
 - parser combinators
 - parsing with [happy](https://haskell-happy.readthedocs.io/en/latest/index.html) :(
 - bidirectional type checking (monomorphic)
+- unification based type inference
+
 
 

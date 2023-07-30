@@ -1,50 +1,43 @@
 module Parsing.AST(
-    GenericArg, 
-    Toplevel(..), 
+    Program(..), 
+    DataType(..), 
+    Constructor(..),
     Pattern(..), 
-    TypeDesc(..),
+    Annotation(..),
     Mexp(..),
     Operation(..),
-    Constant(..),
-    TypeData(..),
-    Binding(..)) where
+    Constant(..)) where
 
-data TypeDesc
-    = TypeDescVar String
-    | TypeDescApply TypeDesc TypeDesc
-    | TypeDescAbstraction [String] TypeDesc
-    | TypeDescArrow TypeDesc TypeDesc
-    | TypeDescTuple [TypeDesc]
-    | TypeDescRecord [String] [TypeDesc]
-    | TypeDescTaggedUnion [(String,TypeDesc)]
+data Program 
+    = Program [DataType] Mexp 
     deriving(Show,Eq)
 
-type GenericArg = String
+type TypeVar = String
+type TypeConstr = String
 
-data Toplevel = Toplevel [TypeData] [Binding] deriving(Show,Eq)
+data DataType 
+    = DataType String [TypeVar] [Constructor] 
+    deriving(Show,Eq)
 
-data TypeData = TypeData { 
-    typeDataName :: String,
-    typeDataQuantifier :: [GenericArg],
-    typeDataDesc :: TypeDesc
- } deriving(Show,Eq)
+data Constructor
+    = Constructor String Annotation
+    deriving(Show,Eq)
 
-data Binding = Binding {
-    bindingName :: String,
-    bindingType ::  TypeDesc,
-    bindingExpr :: Mexp
- } deriving(Show,Eq)
-
-type Closed = Bool
+data Annotation
+    = AnnoVar String
+    | AnnoTuple [Annotation]
+    | AnnoArrow Annotation Annotation
+    | AnnoConstr String [Annotation]
+    deriving(Show,Eq)
 
 data Pattern
     = PatVar String
     | PatHole
     | PatTuple [Pattern]
-    | PatRecord [String] [Pattern] Closed
-    | PatConstraint Pattern TypeDesc
+    -- | PatRecord [String] [Pattern] Closed
+    | PatConstraint Pattern Annotation
     | PatConstant Constant
-    | PatConstruct [Pattern]
+    | PatConstr [Pattern]
     deriving(Show,Eq)
 
 data Mexp
@@ -58,8 +51,7 @@ data Mexp
     | Tuple [Mexp]
     | Record [String] [Mexp]
     | Prim Operation [Mexp]
-    | Instantiate Mexp [TypeDesc]
-    | Constraint Mexp TypeDesc
+    | Constraint Mexp Annotation
     | Constant Constant
     | Hole
     deriving(Show,Eq)

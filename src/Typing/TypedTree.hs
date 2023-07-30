@@ -5,21 +5,22 @@ module Typing.TypedTree(
     Texp(..),
     Toplevel(..),
     Binding(..),
-    Constant(..)
+    Constant(..),
+    Scheme(..)
 ) where 
 
 import qualified Parsing.AST as AST
 
-
+-- id : forall a . a -> a
+data Scheme 
+    = Scheme [String] Type
+    deriving(Show)
 
 data Type
     = TypeVar String
     | TypeTuple [Type]
-    | TypeRecord [String] [Type]
-    | TypeApply Type [Type]
-    | TypeAbstraction [String] Type
     | TypeArrow Type Type
-    | TypeTaggedUnion [(String,Type)]
+    | TypeConstr String [Type]
     | TypeHole
     deriving(Show,Eq)
 
@@ -28,9 +29,7 @@ type Closed = Bool
 data Pattern
     = PatVar String Type
     | PatTuple [Pattern] Type
-    | PatRecord [String] [Pattern] Closed Type
-    | PatConstruct [Pattern] Type
-    | PatConstraint Pattern AST.TypeDesc Type
+    | PatConstr [Pattern] Type
     | PatConstant Constant Type
     | PatHole Type
     | PatError Type

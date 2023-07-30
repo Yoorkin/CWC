@@ -25,6 +25,8 @@ dependencies:
 - containers
 - directory
 - mtl
+- lens
+- pretty-simple
 
 ghc-options:
 - -Wall

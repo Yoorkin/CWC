@@ -1,19 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module Typing.TypeContext(
-    Context,
-    add,
-    find,
-    toplevelTyping,
-    typeOfDesc,
-    findByLabels,
-    rightMostType,
-    leftSeqType,
-    typeOfTexp,
-    typeOfTpat,
-    addPatternVars,
-    decomposeArrowType,
-    composeArrowType
-) where
+module Typing.TypeContext where
 
 
 import qualified Parsing.AST as AST
@@ -21,7 +7,7 @@ import qualified Data.Map as Map
 import qualified Typing.TypedTree as Typed
 import Data.List (groupBy)
 import qualified Typing.Builtin as Builtin
-import Parsing.AST (TypeData(typeDataName))
+import Parsing.AST
 import Data.Maybe
 import qualified Control.Arrow as Typed
 
@@ -33,7 +19,7 @@ typeOfTexp (Typed.Apply _ _ ty) = ty
 typeOfTexp (Typed.Let _ _ _ ty) = ty
 typeOfTexp (Typed.Letrec _ _ _ ty) = ty
 typeOfTexp (Typed.If _ _ _ ty) = ty
-typeOfTexp (Typed.Match _ _ ty) = ty
+typeOfTexp (Typed.Match _ _ _ ty) = ty
 typeOfTexp (Typed.Prim _ _ ty) = ty
 typeOfTexp (Typed.Tuple _ ty) = ty
 typeOfTexp (Typed.Record _ _ ty) = ty
@@ -44,12 +30,18 @@ typeOfTexp (Typed.Error ty) = ty
 typeOfTpat :: Typed.Pattern -> Typed.Type
 typeOfTpat (Typed.PatVar _ ty) = ty
 typeOfTpat (Typed.PatTuple _ ty) = ty
-typeOfTpat (Typed.PatRecord _ _ _ ty) = ty
-typeOfTpat (Typed.PatConstruct _ ty) = ty
-typeOfTpat (Typed.PatConstraint _ _ ty) = ty 
+typeOfTpat (Typed.PatConstr _ ty) = ty
 typeOfTpat (Typed.PatConstant _ ty) = ty
 typeOfTpat (Typed.PatHole ty) = ty
 
+typeOfConst :: AST.Constant -> Typed.Type
+typeOfConst c = case c of
+        Integer _ -> Builtin.intType
+        Boolean _ -> Builtin.boolType
+        Float _ -> Builtin.floatType
+        String _ -> Builtin.stringType
+        Char _ -> Builtin.charType
+        Unit -> Builtin.unitType
 
 data Context = Context {
     recordTypes :: Map.Map [String] Typed.Type,
@@ -71,35 +63,21 @@ findByLabels ls Context{ recordTypes } = Map.lookup ls recordTypes
 freshName :: Int -> String
 freshName i = [l:show r | l <- ['a'..'z'], r <- [0..]] !! i
 
-toplevelTyping :: AST.Toplevel -> Context
-toplevelTyping (AST.Toplevel types bindings) =
-    Context {
-        recordTypes = Map.empty,
-        types = Map.fromList ((\x -> (AST.typeDataName x, typeOfDesc $ AST.typeDataDesc x)) <$> types),
-        bindings = Map.fromList ((\x -> (AST.bindingName x, typeOfDesc $ AST.bindingType x)) <$> bindings)
-    }
+typeOfAnno :: AST.Annotation -> Typed.Type
+typeOfAnno x = case x of
+    (AST.AnnoVar x) -> Typed.TypeVar x
+    (AST.AnnoArrow x y) -> Typed.TypeArrow (typeOfAnno x) (typeOfAnno y)
+    (AST.AnnoTuple elems) -> Typed.TypeTuple (map typeOfAnno elems)
+    (AST.AnnoConstr name desc) -> Typed.TypeConstr name (map typeOfAnno desc)
+    _ -> error "ababab"
 
-typeOfDesc :: AST.TypeDesc -> Typed.Type
-typeOfDesc (AST.TypeDescVar x) = Typed.TypeVar x
-typeOfDesc (AST.TypeDescArrow x y) = Typed.TypeArrow (typeOfDesc x) (typeOfDesc y)
-typeOfDesc (AST.TypeDescTuple elems) = Typed.TypeTuple (map typeOfDesc elems)
-typeOfDesc (AST.TypeDescRecord labels descs) =
-    Typed.TypeRecord labels (map typeOfDesc descs)
-typeOfDesc (AST.TypeDescTaggedUnion unions) =
-    let (tags,descs) = unzip unions
-    in Typed.TypeTaggedUnion (zip tags (map typeOfDesc descs))
-typeOfDesc (AST.TypeDescAbstraction tyVars ty) = 
-    Typed.TypeAbstraction tyVars (typeOfDesc ty)
-typeOfDesc _ = error "ababab"
+-- rightMostType :: Typed.Type -> Typed.Type
+-- rightMostType (Typed.TypeArrow _ r) = rightMostType r
+-- rightMostType x = x
 
-
-rightMostType :: Typed.Type -> Typed.Type
-rightMostType (Typed.TypeArrow _ r) = rightMostType r
-rightMostType x = x
-
-leftSeqType :: Typed.Type -> [Typed.Type]
-leftSeqType (Typed.TypeArrow l r) = l : leftSeqType r  
-leftSeqType _ = []
+-- leftSeqType :: Typed.Type -> [Typed.Type]
+-- leftSeqType (Typed.TypeArrow l r) = l : leftSeqType r  
+-- leftSeqType _ = []
 
 decomposeArrowType :: Typed.Type -> ([Typed.Type], Typed.Type)
 decomposeArrowType ty@(Typed.TypeArrow _ _) = loop ty []
@@ -116,9 +94,7 @@ addPatternVars pat ctx =
     case pat of
         Typed.PatVar name ty -> add name ty ctx
         Typed.PatTuple elems _ -> loop elems ctx
-        Typed.PatRecord _ pats _ _ -> loop pats ctx
-        Typed.PatConstruct pats _ -> loop pats ctx
-        Typed.PatConstraint pat _ _ -> addPatternVars pat ctx
+        Typed.PatConstr pats _ -> loop pats ctx
         Typed.PatHole _ -> ctx
         Typed.PatError _ -> ctx
     where 
